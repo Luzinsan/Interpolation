@@ -23,6 +23,8 @@ int main()
         std::ifstream* fin = data.setInputDevice(choice);
         if (fin) data.inputData(fin);
         else break;
+        data.NewtonInterpolation();
+
         
     } while (choice);
     system("pause");
