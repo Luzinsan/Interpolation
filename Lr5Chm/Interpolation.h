@@ -13,21 +13,20 @@ namespace luMath
     std::streambuf* redirectInput(std::ifstream* fin = NULL);
     char getSymbol(std::initializer_list<char> list,
         std::string notification_message = "",
-        std::string error_message = "Недопустимое значение, попробуйте ещё раз.\n->");
+        std::string error_message = "Недопустимое значение, попробуйте ещё раз.\n-> ");
     double getDouble(double min = -DBL_MAX,
         double max = DBL_MAX,
         std::string notification_message = "",
-        std::string error_message = "Недопустимое значение, попробуйте ещё раз.\n->");
+        std::string error_message = "Недопустимое значение, попробуйте ещё раз.\n-> ");
     template<class T> T* getGridX(T* temp_array, int size,
         std::string notification_message,
-        std::string error_message = "Недопустимое значение, попробуйте ещё раз.\n->");
+        std::string error_message = "Недопустимое значение, попробуйте ещё раз.");
 
     template<class T>
     class Interpolation
     {
     private:
         std::streambuf* _original_cin;
-        std::ifstream* _fin;
         char _method;  // требуемый метод интерполирования 
                        // (1 – полином Ноютона,
                        //  2 – полином Лагранжа);
@@ -54,143 +53,156 @@ namespace luMath
     public:
 
         Interpolation()
-            : _original_cin{ std::cin.rdbuf() }, _fin{ NULL },
+            : _original_cin{ std::cin.rdbuf() },
             _method(1), _k(0), _n(-1), _s('u'), _a(0), _b(0),
             _x0(Vector<T>()), _y0(Vector<T>()), _m(0),
             _res_x(Vector<T>()), _t('n'), _f("")
         {
         }
-
         // Установка потока ввода
-        Interpolation(char input_method) : Interpolation()
+        std::ifstream* setInputDevice(char input_method)
         {
+            std::ifstream* fin = NULL;
             switch (input_method)
             {
+            case '1': return NULL;
             case '2':
             {
                 std::string filename;
-                std::cout << "Введите имя входного файла:\n->";
+                std::cout << "\n\tВведите имя входного файла:\n-> ";
                 getline(std::cin, filename);
-                _fin = new std::ifstream(filename);
+                fin = new std::ifstream(filename);
                 //сохраняем старый поток вывода и ввода и перенаправляем стандартный поток на пользовательский файл
-                _original_cin = redirectInput(_fin);
-                if (!_original_cin)  input_method = '4';
+                _original_cin = redirectInput(fin);
+                if (!_original_cin)  return NULL;
                 break;
             }
             case '3':
-                _fin = new std::ifstream("input_non-uniform_grid.txt");
+                fin = new std::ifstream("input_non-uniform_grid.txt");
                 //сохраняем старый поток и перенаправляем стандартный поток на файл input.txt
-                _original_cin = redirectInput(_fin);
-                if (!_original_cin) input_method = '4';
+                _original_cin = redirectInput(fin);
+                if (!_original_cin) return NULL;
                 break;
-            case '4': return;
             default:
-                throw std::invalid_argument("Нет подходящего метода ввода данных...\n");
+                throw std::invalid_argument("\n\t\tНет подходящего метода ввода данных...\n");
             }
-            Interpolation(_fin);
+            return fin;
         }
-
-
         // Считывание данных из текущего потока ввода
-        Interpolation(std::ifstream* in)
+        void inputData(std::ifstream* in)
         {
-            std::string string;
-            if (std::cin.rdbuf() == _original_cin)
+            if (!in)
             {
                 _method = getSymbol({ '1', '2' }, "\n\tВведите требуемый метод интерполирования:"
-                    "\n\t(1 – полином Ньютона;"
-                    "\n\t 2 – полином Лагранжа)");
-                _k      = getSymbol({ '0','1','2' }, "\n\tПорядок производной:"
-                    "\n\t(0 – вычисляется сам полином; "
-                    "\n\t 1 – его первая производная;"
-                    "\n\t 2 – его вторая производная") - '0';
-                _n = getDouble(0, INT_MAX, "\n\tВведите порядок полинома:");
-                _s = getSymbol({ 'u','n' }, "\n\tВведите символ, задающий тип исходной сетки"
-                    "\n\t(u – uniform grid     – равномерная сетка,"
-                    "\n\t n – non-uniform grid – неравномерная сетка):");
-                    
-                T* temp_array = new T[_n];
+                    "\n\t1 – полином Ньютона;"
+                    "\n\t2 – полином Лагранжа.\n-> ");
+                _k = getSymbol({ '0','1','2' }, "\n\tПорядок производной:"
+                    "\n\t0 – вычисляется сам полином;"
+                    "\n\t1 – его первая производная;"
+                    "\n\t2 – его вторая производная.\n-> ") - '0';
+                _n = getDouble(0, INT_MAX, "\n\tВведите порядок полинома:\n-> ");
+                _s = getSymbol({ 'u','n' }, "\n\tВведите символ, задающий тип исходной сетки:"
+                    "\n\tu – uniform grid     – равномерная сетка;"
+                    "\n\tn – non-uniform grid – неравномерная сетка).\n-> ");
+
+                T* temp_array = new T[_n+1];
                 if (_s == 'u')
                 {
-                    _a = getDouble(-INT_MAX, INT_MAX, "\n\tВведите левую границу рассматриваемого отрезка, на котором будет интерполироваться функция:");
-                    _b = getDouble(-INT_MAX, INT_MAX, "\n\tВведите правую границу рассматриваемого отрезка, на котором будет интерполироваться функция:");
+                    _a = getDouble(-INT_MAX, INT_MAX, "\n\tВведите левую границу рассматриваемого отрезка, на котором будет интерполироваться функция:\n-> ");
+                    _b = getDouble(-INT_MAX, INT_MAX, "\n\tВведите правую границу рассматриваемого отрезка, на котором будет интерполироваться функция:\n-> ");
                 }
-                else 
+                else
                 {
-                    _x0 = Vector<T>(_n, getGridX(temp_array, _n,
-                        "\n\tВведите значения узлов интерполяционной сетки:\n", 
-                        "\n\tЗначения узлов должны идти строго по возрастанию. Введите другое значение.\n"), 
+                    _x0 = Vector<T>(_n+1, getGridX(temp_array, _n+1,
+                        "\n\tВведите значения узлов интерполяционной сетки:\n",
+                        "\n\tЗначения узлов должны идти строго по возрастанию. Введите другое значение."),
                         true);
                     delete[] temp_array;
                 }
 
-                std::cout << "Введите значения функции в узлах интерполяционной сетки:\n";
+                temp_array = new T[_n + 1];
+                std::cout << "\n\tВведите значения функции в узлах интерполяционной сетки:\n";
                 for (unsigned i = 0; i <= _n; i++)
-                    temp_array[i] = getDouble(-DBL_MAX, DBL_MAX, (std::stringstream("[") << i << "]: ").str());
-                _y0 = Vector<T>(_n, temp_array, true);
+                    temp_array[i] = getDouble(-DBL_MAX, DBL_MAX, (std::stringstream() << "-> [" << i << "]: ").str());
+                _y0 = Vector<T>(_n+1, temp_array, true);
                 delete[] temp_array;
 
-                _m = getDouble(0, INT_MAX, "\n\tВведите количество интервалов в результирующей сетке:");
-                _res_x = Vector<T>(_m, getGridX(temp_array, _m,
-                    "\n\tВведите значения узлов результирующей интерполяционной сетки : \n",
-                    "\n\tЗначения узлов должны идти строго по возрастанию. Введите другое значение.\n"),
+                _m = getDouble(0, INT_MAX, "\n\tВведите количество интервалов в результирующей сетке:\n");
+                temp_array = new T[_m+1];
+                _res_x = Vector<T>(_m+1, getGridX(temp_array, _m+1,
+                    "\n\tВведите значения узлов результирующей интерполяционной сетки:\n",
+                    "\n\t\t\tЗначения узлов должны идти строго по возрастанию. Введите другое значение.\n"),
                     true);
                 delete[] temp_array;
-                    
-                _t = getSymbol({ '1', '2' }, "\n\tИзвестно ли аналитическое выражение для функции f(x)?"
-                    "\n\t(y – да;"
-                    "\n\t n – нет)");
-                if (_t == 'y') 
+
+                _t = getSymbol({ 'y', 'n' }, "\n\tИзвестно ли аналитическое выражение для функции f(x)?"
+                    "\n\ty – да;"
+                    "\n\tn – нет\n-> ");
+                if (_t == 'y')
                 {
                     char choice = 'y';
                     while (choice == 'y')
                     {
                         std::cout << "\n\tВведите выражение для функции:\n-> ";
-                        getline(*in, _f);
+                        getline(std::cin, _f);
                         if (_f.empty())
                         {
                             std::cerr << "\n\tНельзя обработать пустую строку.";
-                            choice == getSymbol({'y','n'},"\n\tПопробовать ещё раз? (y/n)\n-> ");
+                            choice == getSymbol({ 'y','n' }, "\n\tПопробовать ещё раз? (y/n)\n-> ");
                         }
+                        else choice = 'n';
                     }
+                }
+                if (in)
+                {
+                    std::cin.rdbuf(_original_cin); // сбрасываем до стандартного ввода с клавиатуры
+                    in->close();
                 }
             }
             else
             {
-                while (true)
+                std::cin >> _method >> _k >> _n >> _s;
+                T* temp_array = new T[_n + 1];
+                if (_s == 'u')
+                    std::cin >> _a >> _b;
+                else
                 {
-                    string.clear();
-                    getline(std::cin, string);
-                    if (!string.empty()) { _expr.push_back(string); continue; }
-                    if (_expr.empty())
-                        std::cerr << "Нельзя обработать пустую строку.\n";
-                    break;
+                    for (unsigned i = 0; i <= _n; i++)
+                        std::cin >> temp_array[i];
+                    _x0 = Vector<T>(_n + 1, temp_array, true);
+                    delete[] temp_array;
                 }
-                _method = _expr[0][0];
-                std::stringstream stream(_expr[2]);
-                getline(stream, string, ' ');
-                _a = std::stod(string);
-                getline(stream, string, ' ');
-                _b = std::stod(string);
-                _eps = std::stod(_expr[3]);
-                _NAfterComma = setNAfterComma(_eps);
-                // взяли все нужные данные, теперь переместим выражение в начало вектора и отрежем всё ненужное
-                // это нужно, так как при считывании с клавиатуры, expr может хранить больше выражений,
-                // нежели считывать из файла только одно
-                _expr[0] = _expr[1];
-                _expr.resize(1);
-                break;
-            }
-        }
-    /*
-        ~Interpolation()
-        {
-            if (_original_cin)
-                std::cin.rdbuf(_original_cin); // сбрасываем до стандартного ввода с клавиатуры
-            if (_fin)
-                _fin->close();
-        }
+                temp_array = new T[_n + 1];
+                for (unsigned i = 0; i <= _n; i++)
+                    std::cin >> temp_array[i];
+                _y0 = Vector<T>(_n + 1, temp_array, true);
+                delete[] temp_array;
 
+                std::cin >> _m;
+                temp_array = new T[_m + 1];
+                for (unsigned i = 0; i <= _m; i++)
+                    std::cin >> temp_array[i];
+                _res_x = Vector<T>(_m + 1, temp_array, true);
+                delete[] temp_array;
+
+
+                std::cin >> _t;
+
+                if (_t == 'y') 
+                {
+                    std::cin.seekg(2, std::ios_base::cur);
+                    getline(std::cin, _f);
+                }
+            }
+
+        }
+        ~Interpolation()
+        {   
+        }
+        
+        
+        
+        /*
         bool isEmptyVectorString()
         {
             return _expr.empty();
@@ -354,11 +366,11 @@ namespace luMath
     {
         std::cout << notification_message;
         unsigned i = 0;
-        array[i] = getDouble(-DBL_MAX, DBL_MAX, (std::stringstream("[") << i << "]: ").str());
+        array[i] = getDouble(-DBL_MAX, DBL_MAX, (std::stringstream() << "-> [" << i << "]: ").str());
         i++;
         do
         {
-            array[i] = getDouble(-DBL_MAX, DBL_MAX, (std::stringstream("[") << i << "]: ").str());
+            array[i] = getDouble(-DBL_MAX, DBL_MAX, (std::stringstream() << "-> [" << i << "]: ").str());
             if (array[i] < array[i - 1]) std::cout << error_message;
             else i++;
         } while (i <= size);
