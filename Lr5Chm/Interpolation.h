@@ -255,6 +255,22 @@ namespace luMath
             return  Polynomial<T>();
         }
 
+        void checkRes(Polynomial<T> pol, char grid = _s)
+        {
+            if (_s == 'u') // uniform grid     Ц равномерна€ сетка
+            {
+                int h = (_b - _a) / _n;
+                for(int i = _a; i <= _b; i += h)
+                    std::cout << "\tP(" << i << ") = " << pol(i) << "\n";
+            }
+            else           // non-uniform grid Ц неравномерна€ сетка
+            {
+                for(int i = 0; i <= _n; i++)
+                    std::cout << "\tP(" << _x0[i] << ") = " << pol(_x0[i]) << "\n";
+            
+            }
+        }
+
         //friend std::ostream& operator<<(std::ostream& out, const Interpolation& expr)
         //{
         //    std::streamsize precision = std::cout.precision();

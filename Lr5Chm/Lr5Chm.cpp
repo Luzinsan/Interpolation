@@ -17,20 +17,29 @@ int main()
         system("cls");
         choice = getSymbol({ '1','2','3','4' },
             "Введите способ ввода данных:\n1) с клавиатуры;\n2) из файла, заданного пользователем\n3) стандартный (из файла input_non-uniform_grid.txt)\n4) завершить программу\n-> ");
-        choice = '3';
         if (choice == '4') break;
         Interpolation<double> data;
         std::ifstream* fin = data.setInputDevice(choice);
         if (fin) data.inputData(fin);
         else break;
-        std::cout << "\n\n\n\tПолином Ньютона: \nполином:\t" << data.getNewtonInterPol(0) 
-            << "\nпроизводная первой степени:\t" << data.getNewtonInterPol(1)
-            << "\nпроизводная второй степени:\t" << data.getNewtonInterPol(2) << "\n";
-        //Polynomial<double> newton = data.getNewtonInterPol();
-        std::cout << "\n\n\n\tПолином Лагранжа: \nполином:\t" << data.getLagrangeInterPol(0)
-            << "\nпроизводная первой степени:\t" << data.getLagrangeInterPol(1)
-            << "\nпроизводная второй степени:\t" << data.getLagrangeInterPol(2) << "\n";
-        //Polynomial<double> lagrange = data.getLagrangeInterPol();
+
+        Polynomial<double> polNewton0(data.getNewtonInterPol(0));
+        Polynomial<double> polNewton1(data.getNewtonInterPol(1));
+        Polynomial<double> polNewton2(data.getNewtonInterPol(2));
+        std::cout << "\n\n\n\tПолином Ньютона: \nполином:\t" << polNewton0
+                  << "\nПроверка по исходной сетке:\n";
+        data.checkRes(polNewton0, 'n');
+        std::cout << "\nпроизводная первой степени:\t" << polNewton1
+                  << "\nпроизводная второй степени:\t" << polNewton2 << "\n";
+        
+        Polynomial<double> polLagrange0(data.getLagrangeInterPol(0));
+        Polynomial<double> polLagrange1(data.getLagrangeInterPol(1));
+        Polynomial<double> polLagrange2(data.getLagrangeInterPol(2));
+        std::cout << "\n\n\n\tПолином Лагранжа: \nполином:\t" << polLagrange0
+                  << "\nПроверка по исходной сетке:\n";
+        data.checkRes(polLagrange0, 'n');
+        std::cout << "\nпроизводная первой степени:\t" << polLagrange1
+                  << "\nпроизводная второй степени:\t" << polLagrange2 << "\n";
        
         
     } while (choice);
