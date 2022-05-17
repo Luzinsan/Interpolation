@@ -6,7 +6,10 @@
 #include <conio.h>
 #include <string>
 #include <sstream>
+#include <iomanip>
 #include "Vector.h"
+#include "Polynomial.h"
+#include "PolStr.h"
 
 namespace luMath
 {
@@ -113,10 +116,10 @@ namespace luMath
                 }
                 else
                 {
-                    _x0 = Vector<T>(_n+1, getGridX(temp_array, _n+1,
-                        "\n\tВведите значения узлов интерполяционной сетки:\n",
-                        "\n\tЗначения узлов должны идти строго по возрастанию. Введите другое значение."),
-                        true);
+                    _x0 = Vector<T>(_n+1,
+                            true, getGridX(temp_array, _n + 1,
+                                "\n\tВведите значения узлов интерполяционной сетки:\n",
+                                "\n\tЗначения узлов должны идти строго по возрастанию. Введите другое значение."));
                     delete[] temp_array;
                 }
 
@@ -124,15 +127,15 @@ namespace luMath
                 std::cout << "\n\tВведите значения функции в узлах интерполяционной сетки:\n";
                 for (unsigned i = 0; i <= _n; i++)
                     temp_array[i] = getDouble(-DBL_MAX, DBL_MAX, (std::stringstream() << "-> [" << i << "]: ").str());
-                _y0 = Vector<T>(_n+1, temp_array, true);
+                _y0 = Vector<T>(_n+1, true, temp_array);
                 delete[] temp_array;
 
                 _m = getDouble(0, INT_MAX, "\n\tВведите количество интервалов в результирующей сетке:\n");
                 temp_array = new T[_m+1];
-                _res_x = Vector<T>(_m+1, getGridX(temp_array, _m+1,
-                    "\n\tВведите значения узлов результирующей интерполяционной сетки:\n",
-                    "\n\t\t\tЗначения узлов должны идти строго по возрастанию. Введите другое значение.\n"),
-                    true);
+                _res_x = Vector<T>(_m + 1,
+                        true, getGridX(temp_array, _m + 1,
+                            "\n\tВведите значения узлов результирующей интерполяционной сетки:\n",
+                            "\n\t\t\tЗначения узлов должны идти строго по возрастанию. Введите другое значение.\n"));
                 delete[] temp_array;
 
                 _t = getSymbol({ 'y', 'n' }, "\n\tИзвестно ли аналитическое выражение для функции f(x)?"
@@ -169,25 +172,23 @@ namespace luMath
                 {
                     for (unsigned i = 0; i <= _n; i++)
                         std::cin >> temp_array[i];
-                    _x0 = Vector<T>(_n + 1, temp_array, true);
+                    _x0 = Vector<T>(_n + 1, true, temp_array);
                     delete[] temp_array;
                 }
                 temp_array = new T[_n + 1];
                 for (unsigned i = 0; i <= _n; i++)
                     std::cin >> temp_array[i];
-                _y0 = Vector<T>(_n + 1, temp_array, true);
+                _y0 = Vector<T>(_n + 1, true, temp_array);
                 delete[] temp_array;
 
                 std::cin >> _m;
                 temp_array = new T[_m + 1];
                 for (unsigned i = 0; i <= _m; i++)
                     std::cin >> temp_array[i];
-                _res_x = Vector<T>(_m + 1, temp_array, true);
+                _res_x = Vector<T>(_m + 1, true, temp_array);
                 delete[] temp_array;
 
-
                 std::cin >> _t;
-
                 if (_t == 'y') 
                 {
                     std::cin.seekg(2, std::ios_base::cur);
@@ -200,92 +201,62 @@ namespace luMath
         {   
         }
         
-        
-        
-        /*
-        bool isEmptyVectorString()
+        void  NewtonInterpolation() 
         {
-            return _expr.empty();
-        }
-        std::vector<std::string> getVectorString()
-        {
-            return _expr;
-        }
+            Vector<Vector<T>> dividedDifferences(_n + 1, true); // вектор-столбец
+            dividedDifferences[0] = Vector<T>(_n + 1, false);   // выделяем вектор-строку (y0,...,yn)
+            for (unsigned i = 0; i <= _n; i++)
+                dividedDifferences[0][i] = _y0[i];
 
-        double getLeft() { return _a; }
-        double getRight() { return _b; }
-        double getEps() { return _eps; }
-        int getNAfterComma() { return _NAfterComma; }
-        char getMethod() { return _method; }
-
-        void setMethod(char method)
-        {
-            if (method < '1' || method > '6') throw std::invalid_argument("Недопустимое значение метода");
-            _method = method;
-        }
-
-        int setNAfterComma(double eps = 0.0)
-        {
-            if (!eps)
-                _eps = getDouble(0, 1,
-                    "Введите погрешность вычислений (0 < eps < 1) (с разделяющей запятой ',')\n->",
-                    "Погрешность не удовлетворяет условию. Попробуйте ещё раз.\n");
-
-            return -std::ceil(std::log10(_eps));
-
-        }
-
-
-
-        std::string getType() const
-        {
-            switch (_method)
+            for (unsigned i = 1; i <= _n; i++)
             {
-            case '1':
-                return "Метод Дихотомии";
-            case '2':
-                return "Метод Хорд";
-            default:
-                return "Не Обнаружен";
+                dividedDifferences[i] = Vector<T>(_n + 1 - i, false); // выделяем вектор-строки разделённых разностей [x_i,...,x_(i+k)]
+                for (unsigned j = 0; j <= _n - i; j++)
+                    dividedDifferences[i][j] = (dividedDifferences[i - 1][j + 1] - dividedDifferences[i - 1][j])
+                                             / (_x0[i + j] - _x0[j]);
             }
-        }
 
-        int getCount()
-        {
-            return _count;
-        }
-
-        friend std::ostream& operator<<(std::ostream& out, const Interpolation& expr)
-        {
-            std::streamsize precision = std::cout.precision();
-            out << expr.getType() << ": \n"
-                << expr._expr
-                << "\nx' = " << std::setprecision(precision) << expr._res << "\n"
-                << "f(x') = " << EvalPolStr(expr._pstr, expr._res, 0)
-                << "\nВедённая погрешность: " << expr._eps
-                << "\nПолученная погрешность вычислений: " << expr._eps_new << std::endl;
-            return out;
-        }
-
-        void setResult(char choice)
-        {
-            _method = choice;
-            switch (_method)
+            Polynomial<T> P;
+            for (int i = 0; i <= _n; i++) 
             {
-            case '1':
-                //setDichotomyMethod();
-                break;
-            case '2':
-                // setChordMethod();
-                break;
-            default:
-                throw std::invalid_argument("Не найден подходящий метод решения");
+                Polynomial<T> mult((T)1);
+                for (int j = 0; j <= i-1; j++)
+                {
+                    std::cout << Polynomial<T>({ -_x0[j], 1 }) << "\n";
+                    mult *= Polynomial<T>({ -_x0[j], 1 });
+                    std::cout << mult << "\n";
+                }
+                P += mult * dividedDifferences[i][0];
+                std::cout << P << "\n";
             }
-        }
-        */
-        
-        
 
+
+
+
+
+        
+        }
+
+        void LagrangeInterpolation() 
+        {
+        
+        
+        
+        }
+
+
+
+        //friend std::ostream& operator<<(std::ostream& out, const Interpolation& expr)
+        //{
+        //    std::streamsize precision = std::cout.precision();
+        //    out << expr.getType() << ": \n"
+        //        << expr._expr
+        //        << "\nx' = " << std::setprecision(precision) << expr._res << "\n"
+        //        << "f(x') = " << EvalPolStr(expr._pstr, expr._res, 0)
+        //        << "\nВедённая погрешность: " << expr._eps
+        //        << "\nПолученная погрешность вычислений: " << expr._eps_new << std::endl;
+        //    return out;
+        //}
     };
 
     std::streambuf* redirectInput(std::ifstream* fin)
