@@ -232,7 +232,7 @@ namespace luMath
             std::cout << "\n\tRESULT: " << P << "\n";
 
             Polynomial<T> P_prod;
-            for (int i = 0; i <= _n; i++)
+            for (int i = 1; i <= _n; i++)
             {
                 Polynomial<T> temp_sum;
                 for (int j = 0; j <= i - 1; j++)
@@ -255,11 +255,43 @@ namespace luMath
             }
 
 
-
-
-
-
             std::cout << "Great!" << " The first prod: " << P_prod;
+
+            Polynomial<T> P_prod_second;
+            for (int i = 2; i <= _n; i++)
+            {
+                Polynomial<T> temp_sum1;
+                for (int j = 0; j <= i - 1; j++)
+                {
+                    Polynomial<T> temp_sum2;
+                    for (int k = 0; k <= i - 1; k++)
+                    {
+                        if (k != j)
+                        {
+                            Polynomial<T> mult((T)1);
+                            for (int l = 0; l <= i - 1; l++)
+                            {
+                                if (l != j && l != k)
+                                {
+                                    std::cout << Polynomial<T>({ -_x0[k], 1 }) << "\n";
+                                    mult *= Polynomial<T>({ -_x0[k], 1 });
+                                    std::cout << mult << "\n";
+                                }
+                            }
+                            temp_sum2 += mult;
+                            std::cout << temp_sum2 << "\n";
+                        }
+                    }
+                    temp_sum1 += temp_sum2;
+                }
+                P_prod_second += temp_sum1 * dividedDifferences[i][0];
+                std::cout << P_prod_second << "\n";
+            }
+
+
+
+
+            std::cout << "Great!" << " The second prod: " << P_prod_second;
         
         }
 
