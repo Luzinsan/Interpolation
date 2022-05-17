@@ -229,11 +229,37 @@ namespace luMath
                 P += mult * dividedDifferences[i][0];
                 std::cout << P << "\n";
             }
+            std::cout << "\n\tRESULT: " << P << "\n";
+
+            Polynomial<T> P_prod;
+            for (int i = 0; i <= _n; i++)
+            {
+                Polynomial<T> temp_sum;
+                for (int j = 0; j <= i - 1; j++)
+                {
+                    Polynomial<T> mult((T)1);
+                    for (int k = 0; k <= i - 1; k++)
+                    {
+                        if (k != j)
+                        {
+                            std::cout << Polynomial<T>({ -_x0[k], 1 }) << "\n";
+                            mult *= Polynomial<T>({ -_x0[k], 1 });
+                            std::cout << mult << "\n";
+                        }
+                    }
+                    temp_sum += mult;
+                    std::cout << temp_sum << "\n";
+                }
+                P_prod += temp_sum * dividedDifferences[i][0];
+                std::cout << P_prod << "\n";
+            }
 
 
 
 
 
+
+            std::cout << "Great!" << " The first prod: " << P_prod;
         
         }
 
