@@ -1,9 +1,8 @@
 ﻿#include <iostream>
 #include "Timer.h"
-#include "IInputDevice.h"
 #include "Interpolation.h"
 
-using namespace luzinsan;
+using namespace luMath;
 
 std::streambuf* redirectOutput(std::ofstream* fout);
 
@@ -17,13 +16,13 @@ int main()
         system("pause");
         system("cls");
         choice = getSymbol({ '1','2','3','4' },
-            "Введите способ ввода данных:\n1) с клавиатуры;\n2) из файла, заданного пользователем\n3) стандартный (из файла input.txt)\n4) завершить программу\n-> ");
+            "Введите способ ввода данных:\n1) с клавиатуры;\n2) из файла, заданного пользователем\n3) стандартный (из файла input_non-uniform_grid.txt)\n4) завершить программу\n-> ");
         //choice = '3';
         if (choice == '4') break;
-        IInputDevice data(choice);
+        Interpolation<double> data(choice);
 
 
-        if (!data.isEmptyVectorString())
+        /*if (!data.isEmptyVectorString())
         {
             std::vector<std::string> exprs = data.getVectorString();
             double a = data.getLeft(), b = data.getRight();
@@ -97,7 +96,7 @@ int main()
                 }
                 else std::cout << GetError() << std::endl;
             }
-        }
+        }*/
 
     } while (choice);
     system("pause");
