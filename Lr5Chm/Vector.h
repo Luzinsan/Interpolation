@@ -18,7 +18,7 @@ namespace luMath
 
 		Vector() : Base<T>(), m_length(0) {}
 
-		Vector(int length, const T* items = NULL, bool transpose = false) //если transpose=true - то вектор-столбец
+		Vector(int length, bool transpose = false, const T* items = NULL) //если transpose=true - то вектор-столбец
 			: Base<T>(1, length, items), m_length(length)
 		{
 			if (transpose)
