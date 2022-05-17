@@ -30,3 +30,11 @@
 *.exe
 *.out
 *.app
+/.vs/Lr5Chm
+/Lr5Chm/x64/Debug/Lr5Chm.tlog
+/Lr5Chm/x64/Debug
+/Lr5Chm/Lr5Chm.vcxproj
+/Lr5Chm/Lr5Chm.vcxproj.filters
+/Lr5Chm/Lr5Chm.vcxproj.user
+/x64/Debug
+/Lr5Chm.sln
