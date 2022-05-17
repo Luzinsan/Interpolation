@@ -46,7 +46,7 @@ namespace luMath
 				
 			unsigned count = 0;
 			for (auto& element : list)
-				m_coeff[count++] = element;
+				m_coeff[count++] = (T)element;
 		}
 		Polynomial(const Polynomial<T>& polynomial)
 			: Polynomial<T>(polynomial.m_length, polynomial.m_coeff) 
@@ -136,7 +136,7 @@ namespace luMath
 			memset(new_coeff, 0, power_of_new * sizeof(T));
 			for (unsigned i = 0; i < m_length; i++)
 				for (unsigned j = 0; j < polynomial.m_length; j++)
-					new_coeff[i + j] += m_coeff[i] * polynomial.m_coeff[j];
+					new_coeff[i + j] += (T)(m_coeff[i] * polynomial.m_coeff[j]);
 			m_length = power_of_new;
 			delete[]  m_coeff;
 			m_coeff = new_coeff;
@@ -284,7 +284,7 @@ namespace luMath
 				if (i == 1)     out << "*x";
 				else if (i > 1)
 				{
-					for (int j = 0; j < i; j++)
+					for (unsigned j = 0; j < i; j++)
 						out << "*x";
 				}
 			}

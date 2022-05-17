@@ -301,13 +301,13 @@ namespace luMath
 	template<> class Base<std::string>
 	{
 	private:
-		//static unsigned s_idCounter;
+		static unsigned s_idCounter;
 	protected:
 		unsigned m_id, m_rows, m_cols;
 		std::string* m_item;
 
 		Base()
-			: m_rows(0), m_cols(0), m_item(NULL)/*, m_id(s_idCounter++)*/
+			: m_rows(0), m_cols(0), m_item(NULL), m_id(s_idCounter++)
 		{
 		}
 

@@ -9,7 +9,6 @@
 #include <iomanip>
 #include "Vector.h"
 #include "Polynomial.h"
-#include "PolStr.h"
 
 namespace luMath
 {
@@ -33,11 +32,11 @@ namespace luMath
         char _method;  // требуемый метод интерполировани€ 
                        // (1 Ц полином Ќоютона,
                        //  2 Ц полином Ћагранжа);
-        int _k;        //  пор€док производной 
+        unsigned _k;        //  пор€док производной 
                        // (0 Ц вычисл€етс€ сам полином, 
                        //  1 Ц его перва€ производна€,
                        //  2 Ц его втора€ производна€)
-        int _n;        // пор€док полинома;
+        unsigned _n;        // пор€док полинома;
         char _s;       // символ, задающий тип исходной сетки 			 	   
                        // (u Ц uniform grid     Ц равномерна€ сетка,
                        //  n Ц non-uniform grid Ц неравномерна€ сетка);
@@ -45,7 +44,7 @@ namespace luMath
         T _b;          // границы отрезка (при равномерной сетке);
         Vector<T> _x0; // узлы сетки(если она неравномерна€);
         Vector<T> _y0; // значени€ функции в узлах сетки;
-        int _m;        // количество интервалов в результирующей сетке
+        unsigned _m;        // количество интервалов в результирующей сетке
                        // (т.е.количество узлов Ц m + 1,
                        //  что сделано дл€ унификации с узлами исходной сетки);
         Vector<T> _res_x; // узлы результирующей сетки;
@@ -103,7 +102,7 @@ namespace luMath
                     "\n\t0 Ц вычисл€етс€ сам полином;"
                     "\n\t1 Ц его перва€ производна€;"
                     "\n\t2 Ц его втора€ производна€.\n-> ") - '0';
-                _n = getDouble(0, INT_MAX, "\n\t¬ведите пор€док полинома:\n-> ");
+                _n = static_cast<unsigned>(getDouble(0, INT_MAX, "\n\t¬ведите пор€док полинома:\n-> "));
                 _s = getSymbol({ 'u','n' }, "\n\t¬ведите символ, задающий тип исходной сетки:"
                     "\n\tu Ц uniform grid     Ц равномерна€ сетка;"
                     "\n\tn Ц non-uniform grid Ц неравномерна€ сетка).\n-> ");
@@ -130,7 +129,7 @@ namespace luMath
                 _y0 = Vector<T>(_n+1, true, temp_array);
                 delete[] temp_array;
 
-                _m = getDouble(0, INT_MAX, "\n\t¬ведите количество интервалов в результирующей сетке:\n");
+                _m = static_cast<unsigned>(getDouble(0, INT_MAX, "\n\t¬ведите количество интервалов в результирующей сетке:\n"));
                 temp_array = new T[_m+1];
                 _res_x = Vector<T>(_m + 1,
                         true, getGridX(temp_array, _m + 1,
@@ -151,7 +150,7 @@ namespace luMath
                         if (_f.empty())
                         {
                             std::cerr << "\n\tЌельз€ обработать пустую строку.";
-                            choice == getSymbol({ 'y','n' }, "\n\tѕопробовать ещЄ раз? (y/n)\n-> ");
+                            choice = getSymbol({ 'y','n' }, "\n\tѕопробовать ещЄ раз? (y/n)\n-> ");
                         }
                         else choice = 'n';
                     }
@@ -259,14 +258,14 @@ namespace luMath
         {
             if (_s == 'u') // uniform grid     Ц равномерна€ сетка
             {
-                int h = (_b - _a) / _n;
-                for(int i = _a; i <= _b; i += h)
+                T h = (_b - _a) / _n;
+                for(T i = _a; i <= _b; i += h)
                     std::cout << "\tP(" << i << ") = " << pol(i) << "\n";
             }
             else           // non-uniform grid Ц неравномерна€ сетка
             {
-                for(int i = 0; i <= _n; i++)
-                    std::cout << "\tP(" << _x0[i] << ") = " << pol(_x0[i]) << "\n";
+                for(unsigned i = 0; i <= _n; i++)
+                    std::cout << "\tP(" << _x0[(unsigned)i] << ") = " << pol(_x0[(unsigned)i]) << "\n";
             
             }
         }
@@ -288,7 +287,7 @@ namespace luMath
             Polynomial<T> NewtonInterPol(Vector<Vector<T>>& dividedDifferences)
             {
                 Polynomial<T> P;
-                for (int i = 0; i <= _n; i++)
+                for (int i = 0; i <= (int)_n; i++)
                 {
                     Polynomial<T> mult((T)1);
                     for (int j = 0; j <= i - 1; j++)
@@ -302,13 +301,13 @@ namespace luMath
             Polynomial<T> Dx1NewtonInterPol(Vector<Vector<T>>& dividedDifferences)
             {
                 Polynomial<T> P_first;
-                for (int i = 1; i <= _n; i++)
+                for (unsigned i = 1; i <= _n; i++)
                 {
                     Polynomial<T> temp_sum;
-                    for (int j = 0; j <= i - 1; j++)
+                    for (unsigned j = 0; j <= i - 1; j++)
                     {
                         Polynomial<T> mult((T)1);
-                        for (int k = 0; k <= i - 1; k++)
+                        for (unsigned k = 0; k <= i - 1; k++)
                             if (k != j)
                                 mult *= Polynomial<T>({ -_x0[k], 1 });
                         temp_sum += mult;
@@ -322,17 +321,17 @@ namespace luMath
             Polynomial<T> Dx2NewtonInterPol(Vector<Vector<T>>& dividedDifferences)
             {
                 Polynomial<T> P_second;
-                for (int i = 2; i <= _n; i++)
+                for (unsigned i = 2; i <= _n; i++)
                 {
                     Polynomial<T> temp_sum1;
-                    for (int j = 0; j <= i - 1; j++)
+                    for (unsigned j = 0; j <= i - 1; j++)
                     {
                         Polynomial<T> temp_sum2;
-                        for (int k = 0; k <= i - 1; k++)
+                        for (unsigned k = 0; k <= i - 1; k++)
                             if (k != j)
                             {
                                 Polynomial<T> mult((T)1);
-                                for (int l = 0; l <= i - 1; l++)
+                                for (unsigned l = 0; l <= i - 1; l++)
                                     if (l != j && l != k)
                                         mult *= Polynomial<T>({ -_x0[k], 1 });
                                 temp_sum2 += mult;
@@ -348,10 +347,10 @@ namespace luMath
             Polynomial<T> LagrangeInterPol()
             {
                 Polynomial<T> P;
-                for (int i = 0; i <= _n; i++)
+                for (unsigned i = 0; i <= _n; i++)
                 {
                     Polynomial<T> mult((T)1);
-                    for (int j = 0; j <= _n; j++)
+                    for (unsigned j = 0; j <= _n; j++)
                         if (j != i) mult *= Polynomial<T>({ -_x0[j], 1 }) / (_x0[i] - _x0[j]);
                     P += mult * _y0[i];
                 }
@@ -362,20 +361,20 @@ namespace luMath
             Polynomial<T> Dx1LagrangeInterPol()
             {
                 Polynomial<T> P_first;
-                for (int i = 0; i <= _n; i++)
+                for (unsigned i = 0; i <= _n; i++)
                 {
                     Polynomial<T> temp_sum;
-                    for (int j = 0; j <= _n; j++)
+                    for (unsigned j = 0; j <= _n; j++)
                         if (j != i)
                         {
                             Polynomial<T> mult((T)1);
-                            for (int k = 0; k <= _n; k++)
+                            for (unsigned k = 0; k <= _n; k++)
                                 if (k != i && k != j)
                                     mult *= Polynomial<T>({ -_x0[k], 1 });
                             temp_sum +=  mult;
                         }
                     T mult = (T)1;
-                    for (int j = 0; j <= _n; j++)
+                    for (unsigned j = 0; j <= _n; j++)
                         if (j != i) mult *= _x0[i] - _x0[j];
                     P_first += temp_sum * _y0[i] / mult;
                 }
@@ -386,18 +385,18 @@ namespace luMath
             Polynomial<T> Dx2LagrangeInterPol()
             {
                 Polynomial<T> P_second;
-                for (int i = 0; i <= _n; i++)
+                for (unsigned i = 0; i <= _n; i++)
                 {
                     Polynomial<T> temp_sum1;
-                    for (int j = 0; j <= _n; j++)
+                    for (unsigned j = 0; j <= _n; j++)
                         if (j != i)
                         {
                             Polynomial<T> temp_sum2;
-                            for (int k = 0; k <= _n; k++)
+                            for (unsigned k = 0; k <= _n; k++)
                                 if (k != i && k != j) 
                                 {
                                     Polynomial<T> mult((T)1);
-                                    for (int l = 0; l <= _n; l++)
+                                    for (unsigned l = 0; l <= _n; l++)
                                         if (l != i && l != j && l != k)
                                             mult *= Polynomial<T>({ -_x0[l], 1 });
                                     temp_sum2 += mult;
@@ -405,7 +404,7 @@ namespace luMath
                             temp_sum1 += temp_sum2;
                         }
                     T mult = (T)1;
-                    for (int j = 0; j <= _n; j++)
+                    for (unsigned j = 0; j <= _n; j++)
                         if (j != i) mult *= _x0[i] - _x0[j];
                     P_second += temp_sum1 * _y0[i] / mult;
                 }
@@ -490,7 +489,7 @@ namespace luMath
         std::string error_message)
     {
         std::cout << notification_message;
-        unsigned i = 0;
+        int i = 0;
         array[i] = getDouble(-DBL_MAX, DBL_MAX, (std::stringstream() << "-> [" << i << "]: ").str());
         i++;
         do
