@@ -201,9 +201,9 @@ namespace luMath
         {   
         }
         
-        void  NewtonInterpolation() 
+        Vector<Vector<T>> getDividedDifferences()
         {
-            Vector<Vector<T>> dividedDifferences(_n + 1, true); // вектор-столбец
+            Vector<Vector<T>> dividedDifferences(_n + 1, true); // вектор-столбец 
             dividedDifferences[0] = Vector<T>(_n + 1, false);   // выдел€ем вектор-строку (y0,...,yn)
             for (unsigned i = 0; i <= _n; i++)
                 dividedDifferences[0][i] = _y0[i];
@@ -213,96 +213,47 @@ namespace luMath
                 dividedDifferences[i] = Vector<T>(_n + 1 - i, false); // выдел€ем вектор-строки разделЄнных разностей [x_i,...,x_(i+k)]
                 for (unsigned j = 0; j <= _n - i; j++)
                     dividedDifferences[i][j] = (dividedDifferences[i - 1][j + 1] - dividedDifferences[i - 1][j])
-                                             / (_x0[i + j] - _x0[j]);
+                    / (_x0[i + j] - _x0[j]);
             }
-
-            Polynomial<T> P;
-            for (int i = 0; i <= _n; i++) 
-            {
-                Polynomial<T> mult((T)1);
-                for (int j = 0; j <= i-1; j++)
-                {
-                    std::cout << Polynomial<T>({ -_x0[j], 1 }) << "\n";
-                    mult *= Polynomial<T>({ -_x0[j], 1 });
-                    std::cout << mult << "\n";
-                }
-                P += mult * dividedDifferences[i][0];
-                std::cout << P << "\n";
-            }
-            std::cout << "\n\tRESULT: " << P << "\n";
-
-            Polynomial<T> P_prod;
-            for (int i = 1; i <= _n; i++)
-            {
-                Polynomial<T> temp_sum;
-                for (int j = 0; j <= i - 1; j++)
-                {
-                    Polynomial<T> mult((T)1);
-                    for (int k = 0; k <= i - 1; k++)
-                    {
-                        if (k != j)
-                        {
-                            std::cout << Polynomial<T>({ -_x0[k], 1 }) << "\n";
-                            mult *= Polynomial<T>({ -_x0[k], 1 });
-                            std::cout << mult << "\n";
-                        }
-                    }
-                    temp_sum += mult;
-                    std::cout << temp_sum << "\n";
-                }
-                P_prod += temp_sum * dividedDifferences[i][0];
-                std::cout << P_prod << "\n";
-            }
-
-
-            std::cout << "Great!" << " The first prod: " << P_prod;
-
-            Polynomial<T> P_prod_second;
-            for (int i = 2; i <= _n; i++)
-            {
-                Polynomial<T> temp_sum1;
-                for (int j = 0; j <= i - 1; j++)
-                {
-                    Polynomial<T> temp_sum2;
-                    for (int k = 0; k <= i - 1; k++)
-                    {
-                        if (k != j)
-                        {
-                            Polynomial<T> mult((T)1);
-                            for (int l = 0; l <= i - 1; l++)
-                            {
-                                if (l != j && l != k)
-                                {
-                                    std::cout << Polynomial<T>({ -_x0[k], 1 }) << "\n";
-                                    mult *= Polynomial<T>({ -_x0[k], 1 });
-                                    std::cout << mult << "\n";
-                                }
-                            }
-                            temp_sum2 += mult;
-                            std::cout << temp_sum2 << "\n";
-                        }
-                    }
-                    temp_sum1 += temp_sum2;
-                }
-                P_prod_second += temp_sum1 * dividedDifferences[i][0];
-                std::cout << P_prod_second << "\n";
-            }
-
-
-
-
-            std::cout << "Great!" << " The second prod: " << P_prod_second;
-        
+            return dividedDifferences;
         }
 
-        void LagrangeInterpolation() 
+        Polynomial<T> getNewtonInterPol(unsigned der = _k)
         {
-        
-        
-        
+            Vector<Vector<T>> dividedDifferences(getDividedDifferences());
+            switch (der)
+            {
+            case 0:
+                return NewtonInterPol(dividedDifferences);
+                break;
+            case 1:
+                return Dx1NewtonInterPol(dividedDifferences);
+                break;
+            case 2:
+                return Dx2NewtonInterPol(dividedDifferences);
+                break;
+            default: throw std::logic_error("Ќепредвиденный пор€док производной");
+            }
+            return  Polynomial<T>();
         }
 
-
+        Polynomial<T> getLagrangeInterPol(unsigned der = _k)
+        {
+            switch (der)
+            {
+            case 0:
+                return LagrangeInterPol();
+                break;
+            case 1:
+                return Dx1LagrangeInterPol();
+                break;
+            case 2:
+                return Dx2LagrangeInterPol();
+                break;
+            default: throw std::logic_error("Ќепредвиденный пор€док производной");
+            }
+            return  Polynomial<T>();
+        }
 
         //friend std::ostream& operator<<(std::ostream& out, const Interpolation& expr)
         //{
@@ -315,6 +266,135 @@ namespace luMath
         //        << "\nѕолученна€ погрешность вычислений: " << expr._eps_new << std::endl;
         //    return out;
         //}
+
+        private:
+            // получение интерпол€ционного полинома Ќьютона в аналитическом виде
+            Polynomial<T> NewtonInterPol(Vector<Vector<T>>& dividedDifferences)
+            {
+                Polynomial<T> P;
+                for (int i = 0; i <= _n; i++)
+                {
+                    Polynomial<T> mult((T)1);
+                    for (int j = 0; j <= i - 1; j++)
+                        mult *= Polynomial<T>({ -_x0[j], 1 });
+                    P += mult * dividedDifferences[i][0];
+                }
+                return P;
+            }
+
+            // получение производной первого пор€дка интерпол€ционного полинома Ќьютона в аналитическом виде
+            Polynomial<T> Dx1NewtonInterPol(Vector<Vector<T>>& dividedDifferences)
+            {
+                Polynomial<T> P_first;
+                for (int i = 1; i <= _n; i++)
+                {
+                    Polynomial<T> temp_sum;
+                    for (int j = 0; j <= i - 1; j++)
+                    {
+                        Polynomial<T> mult((T)1);
+                        for (int k = 0; k <= i - 1; k++)
+                            if (k != j)
+                                mult *= Polynomial<T>({ -_x0[k], 1 });
+                        temp_sum += mult;
+                    }
+                    P_first += temp_sum * dividedDifferences[i][0];
+                }
+                return P_first;
+            }
+
+            // получение производной второго пор€дка интерпол€ционного полинома Ќьютона в аналитическом виде
+            Polynomial<T> Dx2NewtonInterPol(Vector<Vector<T>>& dividedDifferences)
+            {
+                Polynomial<T> P_second;
+                for (int i = 2; i <= _n; i++)
+                {
+                    Polynomial<T> temp_sum1;
+                    for (int j = 0; j <= i - 1; j++)
+                    {
+                        Polynomial<T> temp_sum2;
+                        for (int k = 0; k <= i - 1; k++)
+                            if (k != j)
+                            {
+                                Polynomial<T> mult((T)1);
+                                for (int l = 0; l <= i - 1; l++)
+                                    if (l != j && l != k)
+                                        mult *= Polynomial<T>({ -_x0[k], 1 });
+                                temp_sum2 += mult;
+                            }
+                        temp_sum1 += temp_sum2;
+                    }
+                    P_second += temp_sum1 * dividedDifferences[i][0];
+                }
+                return P_second;
+            }
+
+            // получение интерпол€ционного полинома Ћагранжа в аналитическом виде
+            Polynomial<T> LagrangeInterPol()
+            {
+                Polynomial<T> P;
+                for (int i = 0; i <= _n; i++)
+                {
+                    Polynomial<T> mult((T)1);
+                    for (int j = 0; j <= _n; j++)
+                        if (j != i) mult *= Polynomial<T>({ -_x0[j], 1 }) / (_x0[i] - _x0[j]);
+                    P += mult * _y0[i];
+                }
+                return P;
+            }
+
+            // получение производной первого пор€дка интерпол€ционного полинома Ћагранжа в аналитическом виде
+            Polynomial<T> Dx1LagrangeInterPol()
+            {
+                Polynomial<T> P_first;
+                for (int i = 0; i <= _n; i++)
+                {
+                    Polynomial<T> temp_sum;
+                    for (int j = 0; j <= _n; j++)
+                        if (j != i)
+                        {
+                            Polynomial<T> mult((T)1);
+                            for (int k = 0; k <= _n; k++)
+                                if (k != i && k != j)
+                                    mult *= Polynomial<T>({ -_x0[k], 1 });
+                            temp_sum +=  mult;
+                        }
+                    T mult = (T)1;
+                    for (int j = 0; j <= _n; j++)
+                        if (j != i) mult *= _x0[i] - _x0[j];
+                    P_first += temp_sum * _y0[i] / mult;
+                }
+                return P_first;
+            }
+
+            // получение производной второго пор€дка интерпол€ционного полинома Ћагранжа в аналитическом виде
+            Polynomial<T> Dx2LagrangeInterPol()
+            {
+                Polynomial<T> P_second;
+                for (int i = 0; i <= _n; i++)
+                {
+                    Polynomial<T> temp_sum1;
+                    for (int j = 0; j <= _n; j++)
+                        if (j != i)
+                        {
+                            Polynomial<T> temp_sum2;
+                            for (int k = 0; k <= _n; k++)
+                                if (k != i && k != j) 
+                                {
+                                    Polynomial<T> mult((T)1);
+                                    for (int l = 0; l <= _n; l++)
+                                        if (l != i && l != j && l != k)
+                                            mult *= Polynomial<T>({ -_x0[l], 1 });
+                                    temp_sum2 += mult;
+                                }
+                            temp_sum1 += temp_sum2;
+                        }
+                    T mult = (T)1;
+                    for (int j = 0; j <= _n; j++)
+                        if (j != i) mult *= _x0[i] - _x0[j];
+                    P_second += temp_sum1 * _y0[i] / mult;
+                }
+                return P_second;
+            }
     };
 
     std::streambuf* redirectInput(std::ifstream* fin)

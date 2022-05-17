@@ -23,8 +23,15 @@ int main()
         std::ifstream* fin = data.setInputDevice(choice);
         if (fin) data.inputData(fin);
         else break;
-        data.NewtonInterpolation();
-
+        std::cout << "\n\n\n\tПолином Ньютона: \nполином:\t" << data.getNewtonInterPol(0) 
+            << "\nпроизводная первой степени:\t" << data.getNewtonInterPol(1)
+            << "\nпроизводная второй степени:\t" << data.getNewtonInterPol(2) << "\n";
+        //Polynomial<double> newton = data.getNewtonInterPol();
+        std::cout << "\n\n\n\tПолином Лагранжа: \nполином:\t" << data.getLagrangeInterPol(0)
+            << "\nпроизводная первой степени:\t" << data.getLagrangeInterPol(1)
+            << "\nпроизводная второй степени:\t" << data.getLagrangeInterPol(2) << "\n";
+        //Polynomial<double> lagrange = data.getLagrangeInterPol();
+       
         
     } while (choice);
     system("pause");
