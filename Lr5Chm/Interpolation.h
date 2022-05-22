@@ -131,7 +131,7 @@ namespace luMath
                     "\n\tu – uniform grid     – равномерная сетка;"
                     "\n\tn – non-uniform grid – неравномерная сетка).\n-> ");
 
-                T* temp_array = new T[_n+1];
+                T* temp_array = new T[_n + 1];
                 if (_s == 'u')
                 {
                     _a = getDouble(-INT_MAX, INT_MAX, "\n\tВведите левую границу рассматриваемого отрезка, на котором будет интерполироваться функция:\n-> ");
@@ -143,7 +143,7 @@ namespace luMath
                     unsigned index = 0;
                     for (T x_i = _a; x_i <= _b; x_i += step, index++)
                         temp_array[index] = getDouble(-DBL_MAX, DBL_MAX, (std::stringstream() << "-> [" << x_i << "]: ").str());
-                    _y0 = Vector<T>(_n + 1, true, temp_array);
+                    _y0 = Vector<T>(_n + 1, false, temp_array);
                     delete[] temp_array;
                 }
                 else
@@ -157,7 +157,7 @@ namespace luMath
 
                     for (unsigned i = 0; i <= _n; i++)
                         temp_array[i] = getDouble(-DBL_MAX, DBL_MAX, (std::stringstream() << "-> [" << _x0[i] << "]: ").str());
-                    _y0 = Vector<T>(_n + 1, true, temp_array);
+                    _y0 = Vector<T>(_n + 1, false, temp_array);
                     delete[] temp_array;
                 }
 
@@ -221,7 +221,7 @@ namespace luMath
                 temp_array = new T[_n + 1];
                 for (unsigned i = 0; i <= _n; i++)
                     std::cin >> temp_array[i];
-                _y0 = Vector<T>(_n + 1, true, temp_array);
+                _y0 = Vector<T>(_n + 1, false, temp_array);
                 delete[] temp_array;
 
                 std::cin >> _m;
@@ -252,6 +252,28 @@ namespace luMath
             if (_f) delete[] _f;
         }
         
+        char getMethod() const { return _method; }
+        unsigned getDerivative() const { return _k; }
+        unsigned getPolOrder() const { return _n; }
+        char getGridType() const { return _s; }
+        Vector<T> getSourceGrid() const 
+        { 
+            if (_s == 'u')
+            {
+                T step = (_b - _a) / _n;
+                Vector<T> x0(_n + 1, false);
+                unsigned index = 0;
+                for (T x_i = _a; x_i <= _b; x_i += step, index++)
+                    x0[index] = x_i;
+                return std::move(x0);
+            }
+            else return _x0;
+        }
+        Vector<T> getValueGrid() const { return _y0; }
+        Vector<T> getResultGrid() const { return _res_x; }
+        char* getOrigAnalytic() const { return _f; }
+
+
         Vector<Vector<T>> getDividedDifferences()
         {
             Vector<Vector<T>> dividedDifferences(_n + 1, true); // вектор-столбец 
@@ -310,7 +332,7 @@ namespace luMath
             return  Polynomial<T>();
         }
 
-        void checkRes(Polynomial<T> pol, char grid = _s)
+        void checkRes(Polynomial<T> pol)
         {
             bool success = true;
             if (_s == 'u') // uniform grid     – равномерная сетка
@@ -342,7 +364,7 @@ namespace luMath
                     }
                 }
             }
-            if (success) std::cout << "\n\tОбразы интерполяционной функции в узлах исходной сетки совпадают с образами исходной сетки данными изначально."
+            if (success) std::cout << "\n\tОбразы интерполяционной функции в узлах исходной сетки совпадают с образами исходной сетки, данными изначально."
                 << "\nУсловие интерполяции выполнено.\nПроверка значений интерполяционной функции в результирующей сетке:\n";
 
             for (unsigned i = 0; i <= _m; i++)
@@ -359,17 +381,50 @@ namespace luMath
                 
         }
 
-        //friend std::ostream& operator<<(std::ostream& out, const Interpolation& expr)
-        //{
-        //    std::streamsize precision = std::cout.precision();
-        //    out << expr.getType() << ": \n"
-        //        << expr._expr
-        //        << "\nx' = " << std::setprecision(precision) << expr._res << "\n"
-        //        << "f(x') = " << EvalPolStr(expr._pstr, expr._res, 0)
-        //        << "\nВедённая погрешность: " << expr._eps
-        //        << "\nПолученная погрешность вычислений: " << expr._eps_new << std::endl;
-        //    return out;
-        //}
+        ///friend std::ostream& operator<<(std::ostream& out, const Interpolation& data)
+        static std::ostream& print(std::ostream& out, Interpolation data)
+        {
+            std::streamsize precision = std::cout.precision();
+            std::streamsize size = std::cout.width();
+            std::setprecision(precision);
+
+            out << "\n\tЗаданный порядок полинома составляемой интерполяционной функции: " << data.getPolOrder()
+                << "\n\tТип исходной сетки: ";
+            if (data.getGridType() == 'u')
+                out << "равномерная сетка.\n";
+            else out << "неравномерная сетка.\n";
+            out << "Прообразы сетки: " << "\t\t\t\t\t\t" << std::setw(size) << data.getSourceGrid()
+                << "Соответствующие заданные образы сетки: " << "\t" << std::setw(size) << data.getValueGrid()
+                << "Требуемый порядок производной интерполирующей функции: " << data.getDerivative();
+               
+            switch (data.getMethod()) 
+            {
+            case '1':
+                out << "\nПолином Ньютона: ";
+                if (data.getDerivative() == 0)
+                {
+                    //Polynomial<double> polNewton0(data.getNewtonInterPol(0));
+                    out << data.getNewtonInterPol(0)
+                        << "\nПроверка по исходной сетке:\n";
+                    data.checkRes(data.getNewtonInterPol(0));
+                }
+                else out << data.getNewtonInterPol(data.getDerivative());
+                break;
+            case '2':
+                out << "\nПолином Лагранжа: ";
+                if (data.getDerivative() == 0)
+                {
+                   // Polynomial<double> polLagrange0(data.getLagrangeInterPol(0));
+                    out << data.getLagrangeInterPol(0)
+                        << "\nПроверка по исходной сетке:\n";
+                    data.checkRes(data.getLagrangeInterPol(0));
+                }
+                else out << data.getLagrangeInterPol(data.getDerivative());
+                break;
+            }
+            
+            return out;
+        }
 
         private:
             // получение интерполяционного полинома Ньютона в аналитическом виде
@@ -472,7 +527,7 @@ namespace luMath
                     
                     P += mult * _y0[i];
                 }
-                return P;
+                return std::move(P);
             }
 
             // получение производной первого порядка интерполяционного полинома Лагранжа в аналитическом виде

@@ -20,15 +20,17 @@ int main()
         if (choice == '4') break;
         Interpolation<double> data;
         std::ifstream* fin = data.setInputDevice(choice);
-        if (fin) data.inputData(fin);
-        else break;
-
-        Polynomial<double> polNewton0(data.getNewtonInterPol(0));
+        data.inputData(fin);
+        
+        std::cout << std::setw(10);
+        Interpolation<double>::print(std::cout, data);
+        
+        /*Polynomial<double> polNewton0(data.getNewtonInterPol(0));
         Polynomial<double> polNewton1(data.getNewtonInterPol(1));
         Polynomial<double> polNewton2(data.getNewtonInterPol(2));
         std::cout << "\n\n\n\tПолином Ньютона: \nполином:\t" << polNewton0
                   << "\nПроверка по исходной сетке:\n";
-        data.checkRes(polNewton0, 'n');
+        data.checkRes(polNewton0);
         std::cout << "\nпроизводная первой степени:\t" << polNewton1
                   << "\nпроизводная второй степени:\t" << polNewton2 << "\n";
         
@@ -37,9 +39,9 @@ int main()
         Polynomial<double> polLagrange2(data.getLagrangeInterPol(2));
         std::cout << "\n\n\n\tПолином Лагранжа: \nполином:\t" << polLagrange0
                   << "\nПроверка по исходной сетке:\n";
-        data.checkRes(polLagrange0, 'n');
+        data.checkRes(polLagrange0);
         std::cout << "\nпроизводная первой степени:\t" << polLagrange1
-                  << "\nпроизводная второй степени:\t" << polLagrange2 << "\n";
+                  << "\nпроизводная второй степени:\t" << polLagrange2 << "\n";*/
        
         
     } while (choice);
