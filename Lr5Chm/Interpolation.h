@@ -9,10 +9,17 @@
 #include <iomanip>
 #include "Vector.h"
 #include "Polynomial.h"
+#include "PolStr.h"
+
+#define EPS 1e-5
+
+
 
 namespace luMath
 {
     std::streambuf* redirectInput(std::ifstream* fin = NULL);
+    std::streambuf* redirectOutput(std::ofstream* fout = NULL);
+    template<class T> inline T factorial(T number);
     char getSymbol(std::initializer_list<char> list,
         std::string notification_message = "",
         std::string error_message = "Недопустимое значение, попробуйте ещё раз.\n-> ");
@@ -21,7 +28,7 @@ namespace luMath
         std::string notification_message = "",
         std::string error_message = "Недопустимое значение, попробуйте ещё раз.\n-> ");
     template<class T> T* getGridX(T* temp_array, int size,
-        std::string notification_message,
+        std::string notification_message = "",
         std::string error_message = "Недопустимое значение, попробуйте ещё раз.");
 
     template<class T>
@@ -29,6 +36,7 @@ namespace luMath
     {
     private:
         std::streambuf* _original_cin;
+        std::streambuf* _original_cout;
         char _method;  // требуемый метод интерполирования 
                        // (1 – полином Ноютона,
                        //  2 – полином Лагранжа);
@@ -51,20 +59,22 @@ namespace luMath
         char _t;          // символ, сообщающий, известно или нет аналитическое выражение для функции f(x)
                           // (y - аналитическое выражение известно,
                           //  n - аналитическое выражение неизвестно);
-        std::string _f;   // аналитическое выражение для функции (если оно известно).
+        char* _f;   // аналитическое выражение для функции (если оно известно).
     public:
 
         Interpolation()
-            : _original_cin{ std::cin.rdbuf() },
+            : _original_cin{ std::cin.rdbuf() }, _original_cout{ std::cout.rdbuf() },
             _method(1), _k(0), _n(-1), _s('u'), _a(0), _b(0),
             _x0(Vector<T>()), _y0(Vector<T>()), _m(0),
-            _res_x(Vector<T>()), _t('n'), _f("")
+            _res_x(Vector<T>()), _t('n'), _f(NULL)
         {
         }
+
         // Установка потока ввода
         std::ifstream* setInputDevice(char input_method)
         {
             std::ifstream* fin = NULL;
+            std::ofstream* fout = NULL;
             switch (input_method)
             {
             case '1': return NULL;
@@ -74,22 +84,36 @@ namespace luMath
                 std::cout << "\n\tВведите имя входного файла:\n-> ";
                 getline(std::cin, filename);
                 fin = new std::ifstream(filename);
-                //сохраняем старый поток вывода и ввода и перенаправляем стандартный поток на пользовательский файл
+                // сохраняем старый поток ввода и перенаправляем его на пользовательский файл
                 _original_cin = redirectInput(fin);
                 if (!_original_cin)  return NULL;
+
+                std::cout << "\n\tВведите имя выходного файла:\n-> ";
+                getline(std::cin, filename);
+                fout = new std::ofstream(filename);
+                // сохраняем старый поток вывода и перенаправляем его на пользовательский файл
+                _original_cout = redirectOutput(fout);
+                if (!_original_cout)  return NULL;
                 break;
             }
             case '3':
-                fin = new std::ifstream("input_non-uniform_grid.txt");
-                //сохраняем старый поток и перенаправляем стандартный поток на файл input.txt
+                fin = new std::ifstream("input_uniform_grid.txt");
+                // сохраняем старый поток ввода и перенаправляем его на файл input_non-uniform_grid.txt 
                 _original_cin = redirectInput(fin);
                 if (!_original_cin) return NULL;
+
+               
+                fout = new std::ofstream("output.txt");
+                // сохраняем старый поток вывода и перенаправляем его на файл output.txt
+                _original_cout = redirectOutput(fout);
+                if (!_original_cout)  return NULL;
                 break;
             default:
                 throw std::invalid_argument("\n\t\tНет подходящего метода ввода данных...\n");
             }
             return fin;
         }
+
         // Считывание данных из текущего потока ввода
         void inputData(std::ifstream* in)
         {
@@ -111,7 +135,16 @@ namespace luMath
                 if (_s == 'u')
                 {
                     _a = getDouble(-INT_MAX, INT_MAX, "\n\tВведите левую границу рассматриваемого отрезка, на котором будет интерполироваться функция:\n-> ");
-                    _b = getDouble(-INT_MAX, INT_MAX, "\n\tВведите правую границу рассматриваемого отрезка, на котором будет интерполироваться функция:\n-> ");
+                    _b = getDouble(_a, INT_MAX, "\n\tВведите правую границу рассматриваемого отрезка, на котором будет интерполироваться функция:\n-> ",
+                                                "\n\tПравая граница численной должна быть больше левой.");
+                    std::cout << "\n\tВведите значения функции в узлах интерполяционной сетки:\n";
+
+                    T step = (_b - _a) / _n;
+                    unsigned index = 0;
+                    for (T x_i = _a; x_i <= _b; x_i += step, index++)
+                        temp_array[index] = getDouble(-DBL_MAX, DBL_MAX, (std::stringstream() << "-> [" << x_i << "]: ").str());
+                    _y0 = Vector<T>(_n + 1, true, temp_array);
+                    delete[] temp_array;
                 }
                 else
                 {
@@ -120,17 +153,17 @@ namespace luMath
                                 "\n\tВведите значения узлов интерполяционной сетки:\n",
                                 "\n\tЗначения узлов должны идти строго по возрастанию. Введите другое значение."));
                     delete[] temp_array;
+                    std::cout << "\n\tВведите значения функции в узлах интерполяционной сетки:\n";
+
+                    for (unsigned i = 0; i <= _n; i++)
+                        temp_array[i] = getDouble(-DBL_MAX, DBL_MAX, (std::stringstream() << "-> [" << _x0[i] << "]: ").str());
+                    _y0 = Vector<T>(_n + 1, true, temp_array);
+                    delete[] temp_array;
                 }
 
-                temp_array = new T[_n + 1];
-                std::cout << "\n\tВведите значения функции в узлах интерполяционной сетки:\n";
-                for (unsigned i = 0; i <= _n; i++)
-                    temp_array[i] = getDouble(-DBL_MAX, DBL_MAX, (std::stringstream() << "-> [" << i << "]: ").str());
-                _y0 = Vector<T>(_n+1, true, temp_array);
-                delete[] temp_array;
 
-                _m = static_cast<unsigned>(getDouble(0, INT_MAX, "\n\tВведите количество интервалов в результирующей сетке:\n"));
-                temp_array = new T[_m+1];
+                _m = static_cast<unsigned>(getDouble(0, INT_MAX, "\n\tВведите количество интервалов в результирующей сетке:\n-> "));
+                temp_array = new T[_m + 1];
                 _res_x = Vector<T>(_m + 1,
                         true, getGridX(temp_array, _m + 1,
                             "\n\tВведите значения узлов результирующей интерполяционной сетки:\n",
@@ -142,22 +175,33 @@ namespace luMath
                     "\n\tn – нет\n-> ");
                 if (_t == 'y')
                 {
+                    std::string F;
                     char choice = 'y';
                     while (choice == 'y')
                     {
                         std::cout << "\n\tВведите выражение для функции:\n-> ";
-                        getline(std::cin, _f);
-                        if (_f.empty())
+                        getline(std::cin, F);
+                        if (!F.empty())
                         {
+                            _f = CreatePolStr(F.c_str(), 0);
+                            if (GetError() != ERR_OK)
+                            {
+                                std::cerr << "\n\tДанное выражение не поддерживается.";
+                                choice = getSymbol({ 'y','n' }, "\n\tПопробовать ещё раз? (y/n)\n-> ");
+                            }
+                            else choice = 'n';
+                        }
+                        else 
+                        { 
                             std::cerr << "\n\tНельзя обработать пустую строку.";
                             choice = getSymbol({ 'y','n' }, "\n\tПопробовать ещё раз? (y/n)\n-> ");
                         }
-                        else choice = 'n';
                     }
+                    
                 }
                 if (in)
                 {
-                    std::cin.rdbuf(_original_cin); // сбрасываем до стандартного ввода с клавиатуры
+                    std::cin.rdbuf(_original_cin); // сбрасываем поток до стандартного зарезервированного ввода
                     in->close();
                 }
             }
@@ -191,13 +235,21 @@ namespace luMath
                 if (_t == 'y') 
                 {
                     std::cin.seekg(2, std::ios_base::cur);
-                    getline(std::cin, _f);
+                    std::string F;
+                    getline(std::cin, F);
+                    _f = CreatePolStr(F.c_str(), 0);
+                    if (GetError() != ERR_OK)
+                        std::cout << "\n\tНекорректно задана аналитическая функция (или не подлежит обработке). \n";
+                    
                 }
             }
 
         }
         ~Interpolation()
         {   
+            if (_original_cout)
+                std::cout.rdbuf(_original_cout); // сбрасываем до стандартного ввода с клавиатуры
+            if (_f) delete[] _f;
         }
         
         Vector<Vector<T>> getDividedDifferences()
@@ -209,18 +261,24 @@ namespace luMath
 
             for (unsigned i = 1; i <= _n; i++)
             {
-                dividedDifferences[i] = Vector<T>(_n + 1 - i, false); // выделяем вектор-строки разделённых разностей [x_i,...,x_(i+k)]
+                dividedDifferences[i] = Vector<T>(_n + 1 - i, false); // выделяем вектор-строки разделённых/конечных разностей [x_i,...,x_(i+k)]/[y_i,...,y_(i+k)]
                 for (unsigned j = 0; j <= _n - i; j++)
-                    dividedDifferences[i][j] = (dividedDifferences[i - 1][j + 1] - dividedDifferences[i - 1][j])
-                    / (_x0[i + j] - _x0[j]);
+                {
+                    if (_s == 'u') // сетка равномерная
+                        dividedDifferences[i][j] = (dividedDifferences[i - 1][j + 1] - dividedDifferences[i - 1][j]);
+                    else // сетка неравномерная
+                        dividedDifferences[i][j] = (dividedDifferences[i - 1][j + 1] - dividedDifferences[i - 1][j])
+                            / (_x0[i + j] - _x0[j]);
+                }
             }
+            std::cout << std::setw(10) << dividedDifferences;
             return dividedDifferences;
         }
 
-        Polynomial<T> getNewtonInterPol(unsigned der = _k)
+        Polynomial<T> getNewtonInterPol(unsigned deg = _k)
         {
             Vector<Vector<T>> dividedDifferences(getDividedDifferences());
-            switch (der)
+            switch (deg)
             {
             case 0:
                 return NewtonInterPol(dividedDifferences);
@@ -236,9 +294,9 @@ namespace luMath
             return  Polynomial<T>();
         }
 
-        Polynomial<T> getLagrangeInterPol(unsigned der = _k)
+        Polynomial<T> getLagrangeInterPol(unsigned deg = _k)
         {
-            switch (der)
+            switch (deg)
             {
             case 0:
                 return LagrangeInterPol();
@@ -256,18 +314,46 @@ namespace luMath
 
         void checkRes(Polynomial<T> pol, char grid = _s)
         {
+            bool success = true;
             if (_s == 'u') // uniform grid     – равномерная сетка
             {
                 T h = (_b - _a) / _n;
-                for(T i = _a; i <= _b; i += h)
+                for (T i = _a; i <= _b; i += h)
+                {
                     std::cout << "\tP(" << i << ") = " << pol(i) << "\n";
+                    if (abs(pol(i) - _y0[i]) > EPS) 
+                    { 
+                        success = false;
+                        std::cout << "\t f(" << i << ") = " << _y0[i] 
+                            << "\n\tУсловие интерполяции не выполняется. Погрешность: " << abs(pol(i) - _y0[i])<< "\n";
+                    }
+                }
+                
             }
             else           // non-uniform grid – неравномерная сетка
             {
-                for(unsigned i = 0; i <= _n; i++)
+                for (unsigned i = 0; i <= _n; i++)
+                {
                     std::cout << "\tP(" << _x0[(unsigned)i] << ") = " << pol(_x0[(unsigned)i]) << "\n";
-            
+                    if (abs(pol(_x0[(unsigned)i]) - _y0[i]) > EPS)
+                    {
+                        success = false;
+                        std::cout << "\t f(" << _x0[(unsigned)i] << ") = " << _y0[i]
+                            << "\n\tУсловие интерполяции не выполняется. Погрешность: " << abs(pol(_x0[(unsigned)i]) - _y0[i]) << "\n";
+                    }
+                }
             }
+            if (success) std::cout << "\n\tОбразы интерполяционной функции в узлах исходной сетки совпадают с образами исходной сетки данными изначально."
+                << "\nУсловие интерполяции выполнено.\nПроверка значений интерполяционной функции в результирующей сетке:\n";
+
+            if (_f) 
+                for (unsigned i = 0; i <= _m; i++)
+                {
+                    std::cout << "\tP(" << _res_x[(unsigned)i] << ") = " << pol(_res_x[(unsigned)i]) << "\n";
+                    T res_f = EvalPolStr(_f, _res_x[(unsigned)i]);
+                    std::cout << "\tf(" << _res_x[(unsigned)i] << ") = " << res_f
+                        << "\n\tПогрешность: " << abs(pol(_res_x[(unsigned)i]) - res_f) << "\n";
+                }
         }
 
         //friend std::ostream& operator<<(std::ostream& out, const Interpolation& expr)
@@ -291,9 +377,23 @@ namespace luMath
                 {
                     Polynomial<T> mult((T)1);
                     for (int j = 0; j <= i - 1; j++)
-                        mult *= Polynomial<T>({ -_x0[j], 1 });
-                    P += mult * dividedDifferences[i][0];
+                    {
+                        if (_s == 'u')
+                        {
+                            mult *= Polynomial<T>({ -(T)j, 1 });
+                            std::cout << mult << "\n";
+                        }
+                        else
+                            mult *= Polynomial<T>({ -_x0[j], 1 });
+                       
+                    }
+                    if (_s == 'u')
+                        P += dividedDifferences[i][0] * mult / factorial(i);
+                    else
+                        P += dividedDifferences[i][0] * mult;
+                    std::cout << P << "\n";
                 }
+                
                 return P;
             }
 
@@ -412,10 +512,11 @@ namespace luMath
             }
     };
 
-    std::streambuf* redirectInput(std::ifstream* fin)
+
+    std::streambuf* redirectInput(std::ifstream* in)
     {
         std::streambuf* original_cin = std::cin.rdbuf();
-        while (!*fin)
+        while (!*in)
         {
             std::string filename;
             char choice;
@@ -427,11 +528,41 @@ namespace luMath
                 getline(std::cin, filename);
             }
             else return NULL;
-            fin->open(filename);
+            in->open(filename);
         }
         //перенаправляем стандартный поток ввода на переданный файл
-        std::cin.rdbuf(fin->rdbuf());
+        std::cin.rdbuf(in->rdbuf());
         return original_cin;
+    }
+
+    std::streambuf* redirectOutput(std::ofstream* out)
+    {
+        std::streambuf* original_cout = std::cout.rdbuf();
+        while (!*out)
+        {
+            std::string filename;
+            char choice;
+            choice = getSymbol({ '1', '2' },
+                "Данный файл не может быть открыт, либо не существует. Попробовать ещё раз?\n1) да\n2) выйти\n->");
+            if (choice == '1')
+            {
+                std::cout << "Введите имя файла:\n->";
+                getline(std::cin, filename);
+            }
+            else return NULL;
+            out->open(filename);
+        }
+        //перенаправляем стандартный поток вывода на переданный файл
+        std::cout.rdbuf(out->rdbuf());
+        return original_cout;
+    }
+
+    template<class T> inline T factorial(T number)
+    {
+        T res = 1;
+        for (unsigned i = 1; i <= number; i++)
+            res *= i;
+        return res;
     }
 
     char getSymbol(std::initializer_list<char> list,
@@ -453,8 +584,8 @@ namespace luMath
         return choice;
     }
 
-    double getDouble(double min, double max, 
-        std::string notification_message, 
+    double getDouble(double min, double max,
+        std::string notification_message,
         std::string error_message)
     {
         std::string epsstr;
@@ -497,11 +628,8 @@ namespace luMath
             array[i] = getDouble(-DBL_MAX, DBL_MAX, (std::stringstream() << "-> [" << i << "]: ").str());
             if (array[i] < array[i - 1]) std::cout << error_message;
             else i++;
-        } while (i <= size);
+        } while (i < size);
         return array;
     }
 }
 #endif
-
-
-
