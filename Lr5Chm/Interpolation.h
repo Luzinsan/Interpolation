@@ -263,15 +263,13 @@ namespace luMath
             {
                 dividedDifferences[i] = Vector<T>(_n + 1 - i, false); // выдел€ем вектор-строки разделЄнных/конечных разностей [x_i,...,x_(i+k)]/[y_i,...,y_(i+k)]
                 for (unsigned j = 0; j <= _n - i; j++)
-                {
                     if (_s == 'u') // сетка равномерна€
                         dividedDifferences[i][j] = (dividedDifferences[i - 1][j + 1] - dividedDifferences[i - 1][j]);
-                    else // сетка неравномерна€
+                    else           // сетка неравномерна€
                         dividedDifferences[i][j] = (dividedDifferences[i - 1][j + 1] - dividedDifferences[i - 1][j])
                             / (_x0[i + j] - _x0[j]);
-                }
             }
-            std::cout << std::setw(10) << dividedDifferences;
+           
             return dividedDifferences;
         }
 
@@ -317,15 +315,16 @@ namespace luMath
             bool success = true;
             if (_s == 'u') // uniform grid     Ц равномерна€ сетка
             {
-                T h = (_b - _a) / _n;
-                for (T i = _a; i <= _b; i += h)
+                unsigned index = 0;
+                
+                for (T q = _a, step = (_b - _a) / _n; q <= _b; q += step, index++)
                 {
-                    std::cout << "\tP(" << i << ") = " << pol(i) << "\n";
-                    if (abs(pol(i) - _y0[i]) > EPS) 
+                    std::cout << "\tP(" << q << ") = " << pol(q) << "\n";
+                    if (abs(pol(q) - _y0[index]) > EPS)
                     { 
                         success = false;
-                        std::cout << "\t f(" << i << ") = " << _y0[i] 
-                            << "\n\t”словие интерпол€ции не выполн€етс€. ѕогрешность: " << abs(pol(i) - _y0[i])<< "\n";
+                        std::cout << "\t f(" << index << ") = " << _y0[index]
+                            << "\n\t”словие интерпол€ции не выполн€етс€. ѕогрешность: " << abs(pol(q) - _y0[index])<< "\n";
                     }
                 }
                 
@@ -346,14 +345,18 @@ namespace luMath
             if (success) std::cout << "\n\tќбразы интерпол€ционной функции в узлах исходной сетки совпадают с образами исходной сетки данными изначально."
                 << "\n”словие интерпол€ции выполнено.\nѕроверка значений интерпол€ционной функции в результирующей сетке:\n";
 
-            if (_f) 
-                for (unsigned i = 0; i <= _m; i++)
+            for (unsigned i = 0; i <= _m; i++)
+            {
+                std::cout << "\tP(" << _res_x[(unsigned)i] << ") = " << pol(_res_x[(unsigned)i]) << "\n";
+                if (_f)
                 {
-                    std::cout << "\tP(" << _res_x[(unsigned)i] << ") = " << pol(_res_x[(unsigned)i]) << "\n";
                     T res_f = EvalPolStr(_f, _res_x[(unsigned)i]);
                     std::cout << "\tf(" << _res_x[(unsigned)i] << ") = " << res_f
                         << "\n\tѕогрешность: " << abs(pol(_res_x[(unsigned)i]) - res_f) << "\n";
                 }
+            }
+            
+                
         }
 
         //friend std::ostream& operator<<(std::ostream& out, const Interpolation& expr)
@@ -379,10 +382,7 @@ namespace luMath
                     for (int j = 0; j <= i - 1; j++)
                     {
                         if (_s == 'u')
-                        {
                             mult *= Polynomial<T>({ -(T)j, 1 });
-                            std::cout << mult << "\n";
-                        }
                         else
                             mult *= Polynomial<T>({ -_x0[j], 1 });
                        
@@ -391,9 +391,7 @@ namespace luMath
                         P += dividedDifferences[i][0] * mult / factorial(i);
                     else
                         P += dividedDifferences[i][0] * mult;
-                    std::cout << P << "\n";
                 }
-                
                 return P;
             }
 
@@ -407,12 +405,18 @@ namespace luMath
                     for (unsigned j = 0; j <= i - 1; j++)
                     {
                         Polynomial<T> mult((T)1);
-                        for (unsigned k = 0; k <= i - 1; k++)
+                        for (int k = 0; k <= i - 1; k++)
                             if (k != j)
-                                mult *= Polynomial<T>({ -_x0[k], 1 });
+                                if (_s == 'u')
+                                    mult *= Polynomial<T>({ -(T)k, 1 });
+                                else
+                                    mult *= Polynomial<T>({ -_x0[k], 1 });
                         temp_sum += mult;
                     }
-                    P_first += temp_sum * dividedDifferences[i][0];
+                    if (_s == 'u')
+                        P_first += temp_sum * dividedDifferences[i][0] / factorial(i);
+                    else
+                        P_first += temp_sum * dividedDifferences[i][0];
                 }
                 return P_first;
             }
@@ -431,14 +435,21 @@ namespace luMath
                             if (k != j)
                             {
                                 Polynomial<T> mult((T)1);
-                                for (unsigned l = 0; l <= i - 1; l++)
+                                for (int l = 0; l <= i - 1; l++)
                                     if (l != j && l != k)
-                                        mult *= Polynomial<T>({ -_x0[k], 1 });
+                                        if (_s == 'u')
+                                            mult *= Polynomial<T>({ -(T)l, 1 });
+                                        else
+                                            mult *= Polynomial<T>({ -_x0[l], 1 });  
                                 temp_sum2 += mult;
                             }
                         temp_sum1 += temp_sum2;
                     }
-                    P_second += temp_sum1 * dividedDifferences[i][0];
+                    if (_s == 'u')
+                        P_second += temp_sum1 * dividedDifferences[i][0] / factorial(i);
+                    else
+                        P_second += temp_sum1 * dividedDifferences[i][0];
+                    
                 }
                 return P_second;
             }
@@ -446,12 +457,19 @@ namespace luMath
             // получение интерпол€ционного полинома Ћагранжа в аналитическом виде
             Polynomial<T> LagrangeInterPol()
             {
+                T h;
+                if (_s == 'u') h = (_b - _a) / _n;
                 Polynomial<T> P;
-                for (unsigned i = 0; i <= _n; i++)
+                for (int i = 0; i <= _n; i++)
                 {
                     Polynomial<T> mult((T)1);
-                    for (unsigned j = 0; j <= _n; j++)
-                        if (j != i) mult *= Polynomial<T>({ -_x0[j], 1 }) / (_x0[i] - _x0[j]);
+                    for (int j = 0; j <= _n; j++)
+                        if (j != i) 
+                            if (_s == 'u')
+                                mult *= Polynomial<T>({ -(T)j, 1 }) / (i - j);
+                            else
+                                mult *= Polynomial<T>({ -_x0[j], 1 }) / (_x0[i] - _x0[j]);
+                    
                     P += mult * _y0[i];
                 }
                 return P;
@@ -460,22 +478,33 @@ namespace luMath
             // получение производной первого пор€дка интерпол€ционного полинома Ћагранжа в аналитическом виде
             Polynomial<T> Dx1LagrangeInterPol()
             {
+                T h;
+                if (_s == 'u') h = (_b - _a) / _n;
                 Polynomial<T> P_first;
-                for (unsigned i = 0; i <= _n; i++)
+                for (int i = 0; i <= _n; i++)
                 {
                     Polynomial<T> temp_sum;
-                    for (unsigned j = 0; j <= _n; j++)
+                    for (int j = 0; j <= _n; j++)
                         if (j != i)
                         {
                             Polynomial<T> mult((T)1);
-                            for (unsigned k = 0; k <= _n; k++)
+                            for (int k = 0; k <= _n; k++)
                                 if (k != i && k != j)
-                                    mult *= Polynomial<T>({ -_x0[k], 1 });
+                                    if (_s == 'u')
+                                        mult *= Polynomial<T>({ -(T)k, 1 }) * h;
+                                    else
+                                        mult *= Polynomial<T>({ -_x0[k], 1 });
+                                    
                             temp_sum +=  mult;
                         }
                     T mult = (T)1;
-                    for (unsigned j = 0; j <= _n; j++)
-                        if (j != i) mult *= _x0[i] - _x0[j];
+                    for (int j = 0; j <= _n; j++)
+                        if (j != i) 
+                            if (_s == 'u')
+                                mult *= (i - j) * h;
+                            else
+                                mult *= _x0[i] - _x0[j];
+                    
                     P_first += temp_sum * _y0[i] / mult;
                 }
                 return P_first;
@@ -484,28 +513,39 @@ namespace luMath
             // получение производной второго пор€дка интерпол€ционного полинома Ћагранжа в аналитическом виде
             Polynomial<T> Dx2LagrangeInterPol()
             {
+                T h;
+                if (_s == 'u') h = (_b - _a) / _n;
                 Polynomial<T> P_second;
-                for (unsigned i = 0; i <= _n; i++)
+                for (int i = 0; i <= _n; i++)
                 {
                     Polynomial<T> temp_sum1;
-                    for (unsigned j = 0; j <= _n; j++)
+                    for (int j = 0; j <= _n; j++)
                         if (j != i)
                         {
                             Polynomial<T> temp_sum2;
-                            for (unsigned k = 0; k <= _n; k++)
+                            for (int k = 0; k <= _n; k++)
                                 if (k != i && k != j) 
                                 {
                                     Polynomial<T> mult((T)1);
-                                    for (unsigned l = 0; l <= _n; l++)
+                                    for (int l = 0; l <= _n; l++)
                                         if (l != i && l != j && l != k)
-                                            mult *= Polynomial<T>({ -_x0[l], 1 });
+                                            if (_s == 'u')
+                                                mult *= Polynomial<T>({ -(T)l, 1 }) * h;
+                                            else
+                                                mult *= Polynomial<T>({ -_x0[l], 1 });
+                                           
                                     temp_sum2 += mult;
                                 }
                             temp_sum1 += temp_sum2;
                         }
                     T mult = (T)1;
-                    for (unsigned j = 0; j <= _n; j++)
-                        if (j != i) mult *= _x0[i] - _x0[j];
+                    for (int j = 0; j <= _n; j++)
+                        if (j != i) 
+                            if (_s == 'u')
+                                mult *= (i - j) * h;
+                            else
+                                mult *= _x0[i] - _x0[j];
+                    
                     P_second += temp_sum1 * _y0[i] / mult;
                 }
                 return P_second;
